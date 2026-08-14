@@ -26,7 +26,7 @@ AsyncWebServer *server = nullptr;
 static String customApSsid = "";
 static String customApPass = "";
 const int MAX_RETRIES = 10;
-bool meshEnabled = true;
+bool meshEnabled = AH_MESH_UART;
 bool hbEnabled = false;
 uint32_t hbInterval = 600000;
 // Runtime gate for vibration mesh broadcasts (NVS key: "vibEnabled").
@@ -194,8 +194,13 @@ void restart_callback(void* arg) {
 void initializeNetwork()
 {
   esp_coex_preference_set(ESP_COEX_PREFER_WIFI);
+#if AH_MESH_UART
   Serial.println("Initializing mesh UART...");
   initializeMesh();
+#else
+  meshEnabled = false;
+  Serial.println("[MESH] UART disabled in this build");
+#endif
 
   Serial.println("Starting AP...");
   randomizeMacAddress();
@@ -825,9 +830,14 @@ void registerRemainingRoutes() {
   server->on("/mesh", HTTP_POST, [](AsyncWebServerRequest *req)
              {
         if (req->hasParam("enabled", true)) {
+#if AH_MESH_UART
             meshEnabled = req->getParam("enabled", true)->value() == "true";
             Serial.printf("[MESH] %s\n", meshEnabled ? "Enabled" : "Disabled");
             req->send(200, "text/plain", meshEnabled ? "Mesh enabled" : "Mesh disabled");
+#else
+            meshEnabled = false;
+            req->send(409, "text/plain", "Mesh UART is not built into this firmware");
+#endif
         } else {
             req->send(400, "text/plain", "Missing enabled parameter");
         } });

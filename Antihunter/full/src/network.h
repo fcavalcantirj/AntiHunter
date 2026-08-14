@@ -5,6 +5,14 @@
 #include <Preferences.h>
 #include "scanner.h"
 
+#ifndef AH_MESH_UART
+#define AH_MESH_UART 1
+#endif
+
+#ifndef AH_RADIO
+#define AH_RADIO 1
+#endif
+
 // T114 v2 rate limiter for Serial Module
 // ~400 B/s sustained, 1 KB burst. Consumer task owns inter-frame pacing via vTaskDelayUntil.
 class SerialRateLimiter {
