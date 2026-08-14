@@ -16,6 +16,9 @@ jobs:
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
+    - name: Test operator CLI contracts
+      run: python3 -m unittest -v scripts/test_antihunter_cli.py
+
     - name: Install cppcheck 2.20
       run: |
         sudo apt-get install -y cmake build-essential libpcre3-dev
