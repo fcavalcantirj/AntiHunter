@@ -17,7 +17,7 @@ EXCLUDE := -i Antihunter/full/src/wifi.c -i Antihunter/full/src/opendroneid.c \
 	-i Antihunter/headless/src/wifi.c -i Antihunter/headless/src/opendroneid.c \
 	--suppress=*:*/opendroneid.h --suppress=*:*/odid_wifi.h
 
-.PHONY: lint lint-full lint-headless build build-full build-headless clean
+.PHONY: lint lint-full lint-headless build build-full build-headless build-n16r8-full build-n16r8-qemu clean
 
 lint: lint-full lint-headless
 
@@ -34,6 +34,12 @@ build-full:
 
 build-headless:
 	pio run -e AntiHunter-headless
+
+build-n16r8-full:
+	pio run -e AntiHunter-n16r8-full
+
+build-n16r8-qemu:
+	pio run -e AntiHunter-n16r8-qemu
 
 clean:
 	pio run -t clean

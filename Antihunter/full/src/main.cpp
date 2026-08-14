@@ -229,7 +229,11 @@ void setup() {
     Serial.println("Waiting for mesh device stability...");
     delay(10000);
 
+#if AH_RADIO
     initializeNetwork();
+#else
+    Serial.println("[RADIO] WiFi/BLE hardware disabled for emulator boot test");
+#endif
     delay(500);
     initializeGPS();
     delay(1000);
@@ -242,9 +246,14 @@ void setup() {
     delay(50);
     initializeDetect();
     delay(50);
+#if AH_EXTERNAL_PERIPHERALS
     initializeGpsPps(21);
+#else
+    Serial.println("[HW] External SD/GPS/RTC/vibration/PPS disabled in this build");
+#endif
     if (xTaskCreatePinnedToCore(detectTask, "DetectTask", 8192, NULL, 3, NULL, 1) != pdPASS)
         Serial.println("[BOOT] ERROR: DetectTask create failed - detection/sentinel inactive");
+#if AH_RADIO
     {
         uint8_t selfMac[6];
         esp_wifi_get_mac(WIFI_IF_AP, selfMac);
@@ -254,6 +263,7 @@ void setup() {
         Serial.printf("[SENTINEL] self-filter mac=%02X:%02X:%02X:%02X:%02X:%02X ssid=%s\n",
                       selfMac[0],selfMac[1],selfMac[2],selfMac[3],selfMac[4],selfMac[5], ssid.c_str());
     }
+#endif
 #if AH_SENTINEL
     if (prefs.getBool("sentBoot", false)) {
         sentinel_setUserEnabled(true);
@@ -266,8 +276,10 @@ void setup() {
     Serial.println("[SENTINEL] Not built into this firmware (stable channel)");
 #endif
 
+#if AH_MESH_UART
     if (xTaskCreatePinnedToCore(uartForwardTask, "UARTForwardTask", 4096, NULL, 2, NULL, 1) != pdPASS)
         Serial.println("[BOOT] ERROR: UARTForwardTask create failed - mesh RX bridge down");
+#endif
     delay(120);
 
     Serial.println("===== ANTIHUNTER DIGINODE v1.0.2 STABLE BOOT COMPLETE =====");
@@ -280,9 +292,14 @@ void setup() {
     if (currentPass.length() == 0) currentPass = AP_PASS;
 
     Serial.printf("NODE ID: %s\n", currentNodeId.c_str());
+#if AH_RADIO
     Serial.printf("WEB UI: http://192.168.4.1/ (SSID: %s, PASS: %s)\n", 
                   currentSsid.c_str(), currentPass.c_str());
     Serial.printf("RANDOMIZED MAC: %s\n", WiFi.softAPmacAddress().c_str());
+#else
+    Serial.println("WEB UI: unavailable (radio disabled in emulator)");
+    Serial.println("RANDOMIZED MAC: unavailable (radio disabled in emulator)");
+#endif
 
     delay(2000);
 }

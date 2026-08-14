@@ -7,6 +7,10 @@
 #include <FS.h>
 #include <SD.h>
 
+#ifndef AH_EXTERNAL_PERIPHERALS
+#define AH_EXTERNAL_PERIPHERALS 1
+#endif
+
 #ifndef COUNTRY
 #define COUNTRY "US"
 #endif

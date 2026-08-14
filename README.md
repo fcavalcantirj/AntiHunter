@@ -394,17 +394,24 @@ cd AntiHunter
 pio device list                                    # List connected devices
 pio run -e AntiHunter-full -t upload               # Flash full firmware (web UI)
 pio run -e AntiHunter-headless -t upload           # Flash headless firmware
+pio run -e AntiHunter-n16r8-full                   # Compile-only check for N16R8
 pio device monitor -e AntiHunter-full              # Serial monitor
 pio run -e AntiHunter-full -t erase -t upload      # Clean flash (erase + upload)
 ```
 
 **Build environments** (same firmware sources; differ only in features/board):
 - `AntiHunter-full` -- Web UI/SoftAP dashboard (ESPAsyncWebServer + AsyncTCP); `AntiHunter-headless` -- serial + mesh only, no web deps.
+- `AntiHunter-n16r8-full` -- generic ESP32-S3-WROOM-1 N16R8 (16 MB flash, 8 MB octal PSRAM), with the full web UI and legacy external peripherals/mesh UART disabled. Treat this as compile-only until the exact module marking and board wiring are verified.
+- `AntiHunter-n16r8-qemu` -- DIO-flash variant for an Espressif QEMU boot smoke test; never upload this emulator-specific image to hardware.
 - ESP32-C5 (2.4 + 5 GHz, testing): envs `AntiHunter-c5-full` / `-c5-headless` on the `feat/c5` branch -- see the [ESP32-C5 page](https://github.com/lukeswitz/AntiHunter/blob/beta/docs/ESP32-C5.md).
 - RadarNode (24GHz radar, experimental): env `RadarNode-c5` -- see the [RadarNode page](https://github.com/lukeswitz/AntiHunter/blob/beta/docs/RADARNODE.md).
 
 > [!NOTE]
 > During the Web Flash process, choose "Erase Device" if upgrading from pre v0.9.2 firmware or to clear saved settings. Preferences are also saved and synced to/from SD storage; if corrupted, settings self-heal. The Web Flasher's **Sentinel & Detectors** section configures the full detection engine (Start-on-Boot, radio mode, every detector toggle, mesh flags, thresholds) — full parity with the web UI's Detectors tab. Anything left on *Default* keeps the firmware setting.
+
+### N16R8 emulation
+
+The N16R8 target includes both Wokwi and Espressif-QEMU smoke-test configurations. See [`docs/N16R8.md`](docs/N16R8.md). These tests can validate boot, partition geometry, PSRAM startup, and application initialization without connecting a physical board. They cannot validate BLE, promiscuous Wi-Fi capture, RF range, or external peripherals.
 
 ---
 
