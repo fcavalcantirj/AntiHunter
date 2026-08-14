@@ -56,3 +56,6 @@ jobs:
 
     - name: Build AntiHunter-headless
       run: pio run -e AntiHunter-headless
+
+    - name: Build AntiHunter-n16r8-full
+      run: pio run -e AntiHunter-n16r8-full

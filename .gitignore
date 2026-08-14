@@ -4,6 +4,7 @@
 .vscode/launch.json
 .vscode/ipch
 .DS_Store
+.env
 .vscode/extensions.json
 .vscode/settings.json
 demo.html

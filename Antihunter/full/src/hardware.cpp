@@ -103,6 +103,11 @@ uint32_t lastBatterySaverHeartbeat = 0;
 // SD & HW Init
 
 bool SafeSD::checkAvailability() {
+#if !AH_EXTERNAL_PERIPHERALS
+    sdAvailable = false;
+    lastCheckResult = false;
+    return false;
+#endif
     static std::mutex sdCheckMutex;
     std::lock_guard<std::mutex> lock(sdCheckMutex);
     uint32_t now = millis();
@@ -1242,6 +1247,11 @@ String getDiagnostics() {
 
 void initializeSD()
 {
+#if !AH_EXTERNAL_PERIPHERALS
+    sdAvailable = false;
+    Serial.println("[SD] External SD disabled in this build");
+    return;
+#endif
     Serial.println("Initializing SD card...");
     Serial.printf("[SD] GPIO Pins SCK=%d MISO=%d MOSI=%d CS=%d\n", SD_CLK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
     SPI.end();
@@ -1261,6 +1271,12 @@ void initializeSD()
 }
 
 void initializeGPS() {
+#if !AH_EXTERNAL_PERIPHERALS
+    gpsValid = false;
+    lastGPSData = "GPS disabled in this build";
+    Serial.println("[GPS] External GPS disabled in this build");
+    return;
+#endif
     Serial.println("Initializing GPS…");
 
     GPS.setRxBufferSize(2048);
@@ -1617,6 +1633,10 @@ void IRAM_ATTR vibrationISR() {
 }
 
 void initializeVibrationSensor() {
+#if !AH_EXTERNAL_PERIPHERALS
+    Serial.println("[VIBRATION] External sensor disabled in this build");
+    return;
+#endif
     try {
         pinMode(VIBRATION_PIN, INPUT_PULLDOWN);
         attachInterrupt(digitalPinToInterrupt(VIBRATION_PIN), vibrationISR, RISING);
@@ -1744,6 +1764,13 @@ void checkAndSendVibrationAlert() {
 
 // RTC functions
 void initializeRTC() {
+#if !AH_EXTERNAL_PERIPHERALS
+    rtcAvailable = false;
+    rtcSynced = false;
+    rtcTimeString = "RTC disabled in this build";
+    Serial.println("[RTC] External RTC disabled in this build");
+    return;
+#endif
     Serial.println("Initializing RTC...");
     Serial.printf("[RTC] Using GPIO SDA:%d SCL:%d\n", RTC_SDA_PIN, RTC_SCL_PIN);
 
