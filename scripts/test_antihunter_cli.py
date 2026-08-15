@@ -273,6 +273,79 @@ class CliContractTests(unittest.TestCase):
             CLI_MODULE.serial_command_class("SCAN_START:2:60:1..11"), "mutating"
         )
 
+    def test_channels_reject_non_ascii_digits_cleanly(self) -> None:
+        # Regression: Python's str.isdigit() is True for chars like "²"/"①"
+        # that int() then rejects, so the guard must not let them through to
+        # int() and raise an uncaught ValueError instead of a clean exit-2.
+        self.assertEqual(CLI_MODULE.validate_channels("1,6,11"), "1,6,11")
+        self.assertIsNone(CLI_MODULE.validate_channels(None))
+        for bad in ("0", "15", "1,,6", "²", "①"):
+            with self.subTest(value=bad):
+                with self.assertRaises(CLI_MODULE.CliError) as caught:
+                    CLI_MODULE.validate_channels(bad)
+                self.assertEqual(caught.exception.exit_code, 2)
+
+    def test_validate_survives_null_queues_without_crashing(self) -> None:
+        # Regression: a firmware reply of `"queues": null` must fail the memory
+        # check cleanly, not crash the validator with an uncaught AttributeError.
+        class NullQueueHandler(FakeBoardHandler):
+            def do_GET(self) -> None:  # noqa: N802 - handler contract
+                if self.path.split("?", 1)[0] == "/api/detect/health":
+                    self.send_payload(
+                        json.dumps(
+                            {
+                                "heap_free": 141136,
+                                "psram_free": 8240532,
+                                "queues": None,
+                            }
+                        ).encode(),
+                        "application/json",
+                    )
+                    return
+                super().do_GET()
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), NullQueueHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            base_url = f"http://127.0.0.1:{server.server_port}"
+            with tempfile.TemporaryDirectory() as temporary:
+                report_dir = Path(temporary) / "null-queues"
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        str(CLI),
+                        "--base-url",
+                        base_url,
+                        "--json",
+                        "validate",
+                        "--wait",
+                        "0",
+                        "--output-dir",
+                        str(report_dir),
+                    ],
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+            self.assertNotIn("Traceback", result.stderr)
+            self.assertEqual(result.returncode, 1, result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["result"], "FAIL")
+            self.assertGreaterEqual(payload["failures"], 1)
+            self.assertTrue(
+                any(
+                    check["status"] == "FAIL"
+                    and "live memory health" in check["message"]
+                    for check in payload["checks"]
+                ),
+                payload["checks"],
+            )
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
