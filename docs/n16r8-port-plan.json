@@ -1,0 +1,143 @@
+{
+  "schema_version": "1.0.0",
+  "title": "AntiHunter full-web port and validation plan for ESP32-S3 N16R8",
+  "updated_at": "2026-08-14T00:18:00-03:00",
+  "scope": {
+    "target": "generic ESP32-S3-WROOM-1 N16R8 dev board",
+    "flash": "16 MB QIO",
+    "psram": "8 MB octal",
+    "control_surface": "AntiHunter SoftAP web UI",
+    "lora": "deferred and compiled out",
+    "external_peripherals": "deferred and compiled out",
+    "physical_flash": "not authorized"
+  },
+  "safety_decision": {
+    "literal_zero_brick_risk_for_compile_and_emulation": true,
+    "reason": "The completed workflow never enumerates, opens, erases, uploads to, or otherwise communicates with a physical USB device.",
+    "literal_zero_brick_risk_for_future_physical_flash": false,
+    "hardware_action": "STOP",
+    "hardware_gate": "A physical upload requires explicit acceptance of nonzero recoverable risk plus exact board identity and recovery verification."
+  },
+  "phases": [
+    {
+      "id": "P00",
+      "name": "Repository and inventory audit",
+      "status": "complete",
+      "evidence": [
+        "Original target is Seeed XIAO ESP32-S3 with qio_opi PSRAM configuration.",
+        "Inventory identifies an unused ESP32-S3 N16R8 dev board with 16 MB flash and 8 MB PSRAM."
+      ]
+    },
+    {
+      "id": "P01",
+      "name": "Unmodified baseline build",
+      "status": "complete",
+      "command": "pio run -e AntiHunter-full",
+      "result": "success",
+      "application_bytes": 2428854
+    },
+    {
+      "id": "P02",
+      "name": "Dedicated N16R8 board profile",
+      "status": "complete",
+      "environment": "AntiHunter-n16r8-full",
+      "board_manifest": "esp32-s3-devkitc1-n16r8",
+      "partition_table": "default_16MB.csv"
+    },
+    {
+      "id": "P03",
+      "name": "Safe generic-board feature gates",
+      "status": "complete",
+      "build_flags": {
+        "AH_EXTERNAL_PERIPHERALS": 0,
+        "AH_MESH_UART": 0
+      },
+      "result": "Legacy external SD, GPS, RTC, vibration, PPS, and Meshtastic UART do not initialize or claim GPIOs."
+    },
+    {
+      "id": "P04",
+      "name": "N16R8 hardware-image compile",
+      "status": "complete",
+      "command": "pio run -e AntiHunter-n16r8-full",
+      "result": "success",
+      "application_bytes": 2364087,
+      "flash_partition_capacity_bytes": 6553600,
+      "static_internal_ram_bytes": 64668
+    },
+    {
+      "id": "P05",
+      "name": "Wokwi exact-memory harness",
+      "status": "complete",
+      "files": [
+        "wokwi.toml",
+        "diagram.json"
+      ],
+      "virtual_hardware": {
+        "soc": "ESP32-S3",
+        "flash_mb": 16,
+        "psram_mb": 8,
+        "psram_type": "octal"
+      },
+      "credential": "WOKWI_CLI_TOKEN is present in a Git-ignored, owner-readable local .env file.",
+      "result": "Merged factory image booted with 8 MB octal PSRAM, SoftAP, web server, and PSRAM-backed detection queues; the expected boot marker was observed.",
+      "limitations": [
+        "Wokwi does not emulate Bluetooth.",
+        "Promiscuous Wi-Fi and RF performance still require real hardware."
+      ]
+    },
+    {
+      "id": "P06",
+      "name": "Espressif QEMU boot smoke test",
+      "status": "complete",
+      "environment": "AntiHunter-n16r8-qemu",
+      "qemu_release": "esp-develop-9.2.2-20260417",
+      "qemu_sha256_verified": true,
+      "expected_marker_observed": "ANTIHUNTER DIGINODE v1.0.2 STABLE BOOT COMPLETE",
+      "emulator_overrides": [
+        "DIO flash",
+        "UART0 logging",
+        "Wi-Fi/BLE initialization disabled because QEMU has no ESP32-S3 RF model"
+      ],
+      "known_result": "QEMU reports octal PSRAM absent, and the firmware reaches boot complete via its no-PSRAM fallback."
+    },
+    {
+      "id": "P07",
+      "name": "Automated build coverage",
+      "status": "complete",
+      "result": "AntiHunter-n16r8-full added to both PlatformIO CI build paths."
+    },
+    {
+      "id": "P08",
+      "name": "Exact PSRAM and basic Wi-Fi simulation",
+      "status": "complete",
+      "attempt_result": "Wokwi CLI reported TEST PASSED after observing the expected AntiHunter boot-complete marker.",
+      "command": "wokwi-cli . --timeout 60000 --expect-text \"ANTIHUNTER DIGINODE v1.0.2 STABLE BOOT COMPLETE\""
+    },
+    {
+      "id": "P09",
+      "name": "Physical preflight",
+      "status": "not_authorized",
+      "required_inputs": [
+        "Photo verification of the exact module marking",
+        "USB-UART versus native USB connector identification",
+        "Documented BOOT and RESET recovery sequence",
+        "Read-only chip/flash identification",
+        "Explicit user acceptance that physical flashing cannot have a 100 percent no-brick guarantee"
+      ]
+    },
+    {
+      "id": "P10",
+      "name": "Physical upload and RF acceptance",
+      "status": "blocked_by_safety_condition",
+      "tests": [
+        "PSRAM reports approximately 8 MB",
+        "SoftAP starts and web UI loads",
+        "Wi-Fi promiscuous capture receives controlled test frames",
+        "BLE scan receives a controlled beacon",
+        "Reset and ROM download recovery work",
+        "No unintended GPIO ownership",
+        "Thermal and long-duration stability"
+      ]
+    }
+  ]
+}
