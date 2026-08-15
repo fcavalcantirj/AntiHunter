@@ -570,7 +570,7 @@ def cmd_validate(args: argparse.Namespace, client: BoardClient) -> int:
         if isinstance(health, dict):
             psram = health.get("psram_free")
             heap = health.get("heap_free")
-            frame_queue = health.get("queues", {}).get("frame")
+            frame_queue = (health.get("queues") or {}).get("frame")
             valid = (
                 isinstance(psram, int)
                 and psram > 0
@@ -663,7 +663,8 @@ def validate_channels(value: str | None) -> str | None:
         return None
     tokens = value.split(",")
     if not tokens or any(
-        not token.isdigit() or not 1 <= int(token) <= 14 for token in tokens
+        not (token.isascii() and token.isdigit()) or not 1 <= int(token) <= 14
+        for token in tokens
     ):
         raise CliError("--channels must be comma-separated integers from 1 to 14", 2)
     return ",".join(str(int(token)) for token in tokens)
