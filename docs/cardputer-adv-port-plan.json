@@ -1,0 +1,1083 @@
+{
+  "schema_version": "1.0.0",
+  "title": "AntiHunter standalone port plan for M5Stack Cardputer-Adv",
+  "generated_at": "2026-08-13T22:01:05-03:00",
+  "repository": {
+    "working_copy": "git@github.com:fcavalcantirj/AntiHunter.git",
+    "upstream": "https://github.com/lukeswitz/AntiHunter",
+    "branch": "main",
+    "commit": "6fa40c683c07f9cbfb5bdd945d7191d88b07e980",
+    "upstream_commit_at_audit": "6fa40c683c07f9cbfb5bdd945d7191d88b07e980",
+    "license": "AGPL-3.0"
+  },
+  "request_interpretation": {
+    "requested_output": "A complete, machine-readable implementation and validation plan.",
+    "requested_execution_condition": "Implement only if technically feasible and if a literal 100 percent guarantee can be made that the Cardputer-Adv will not be bricked.",
+    "selected_product_scope": "Standalone Cardputer-Adv Wi-Fi and BLE security monitor with native screen, keyboard, and built-in microSD.",
+    "lora_scope": "Deferred. LoRa is not part of the standalone MVP or its acceptance criteria."
+  },
+  "decision": {
+    "standalone_mvp_feasibility": "conditionally_feasible_but_unproven",
+    "full_feature_parity_feasibility": "not_established",
+    "absolute_no_brick_guarantee_possible": false,
+    "user_execution_condition_satisfied": false,
+    "implementation_authorized": false,
+    "hardware_flash_authorized": false,
+    "execution_state": "stopped_before_firmware_changes",
+    "reason": "The ESP32-S3 ROM download path makes most bad firmware recoverable, but a literal zero-risk guarantee is impossible. Flash media failure, unstable power, cable or host failure, incorrect board identification, incorrect flash geometry, physical pin contention, and hardware defects cannot be eliminated by software planning.",
+    "work_completed": [
+      "Repository architecture and hardware assumptions were inspected.",
+      "The fork relationship and audited commit were verified.",
+      "Cardputer-Adv board, display, keyboard, storage, expansion, and recovery documentation were checked.",
+      "Relevant M5Cardputer, M5Unified, PlatformIO, Meshtastic, and RadioLib documentation was queried through Context7.",
+      "No firmware source, build configuration, binary, board, flash, partition table, bootloader, NVS, secure-boot state, flash-encryption state, or eFuse was changed."
+    ],
+    "next_decision_required": "The owner must explicitly replace the 100-percent guarantee requirement with authorization for a recoverable, staged, nonzero-risk port before any implementation or upload begins."
+  },
+  "scope": {
+    "mvp_included": [
+      "Cardputer-Adv board detection and initialization through the official M5Cardputer and M5Unified libraries",
+      "Native 240x135 ST7789V2 status display",
+      "Native TCA8418 keyboard input",
+      "Passive Wi-Fi and BLE detection using the ESP32-S3 radio",
+      "Built-in microSD logging and configuration",
+      "USB serial diagnostics and recovery-oriented boot reporting",
+      "A reduced-memory feature profile suitable for a board without PSRAM"
+    ],
+    "mvp_excluded": [
+      "LoRa, SX1262, Cap LoRa-1262, and Meshtastic integration",
+      "External GPS and PPS",
+      "External DS3231 RTC",
+      "External SW-420 vibration sensor",
+      "Automatic tamper-triggered erase",
+      "Audio, microphone, headphone, and infrared features",
+      "Karma bait or any other active RF transmission feature",
+      "Over-the-air firmware updates",
+      "Secure boot, flash encryption, eFuse writes, or read-protection",
+      "A promise of feature parity with AntiHunter-full"
+    ],
+    "later_optional": [
+      "Full web UI if measured internal-RAM headroom is sufficient",
+      "BMI270-based motion indication without destructive erase behavior",
+      "Cap LoRa-1262 GPS",
+      "LoRa or Meshtastic after a separate architecture and memory review"
+    ]
+  },
+  "repository_dissection": {
+    "current_targets": [
+      {
+        "environment": "AntiHunter-full",
+        "board": "seeed_xiao_esp32s3",
+        "control": "Wi-Fi AP web UI, USB serial, and UART Meshtastic bridge",
+        "source_root": "Antihunter/full/src"
+      },
+      {
+        "environment": "AntiHunter-headless",
+        "board": "seeed_xiao_esp32s3",
+        "control": "USB serial and UART Meshtastic bridge",
+        "source_root": "Antihunter/headless/src"
+      }
+    ],
+    "core_data_flow": [
+      "ESP32-S3 Wi-Fi promiscuous capture and BLE scanning collect observations.",
+      "Scanner, detector, baseline, drone, randomization, and triangulation modules process observations.",
+      "Results are stored in NVS and microSD and, in the full build, served through a Wi-Fi AP.",
+      "Mesh output is text sent over UART to a second board that runs Meshtastic; AntiHunter does not currently drive an SX1262 radio."
+    ],
+    "major_modules": [
+      {
+        "name": "startup_and_scheduling",
+        "files": [
+          "Antihunter/full/src/main.cpp",
+          "Antihunter/headless/src/main.cpp"
+        ]
+      },
+      {
+        "name": "board_peripherals_persistence_and_tamper",
+        "files": [
+          "Antihunter/full/src/hardware.h",
+          "Antihunter/full/src/hardware.cpp",
+          "Antihunter/headless/src/hardware.h",
+          "Antihunter/headless/src/hardware.cpp"
+        ]
+      },
+      {
+        "name": "wifi_ble_scan_and_detection",
+        "files": [
+          "Antihunter/full/src/scanner.cpp",
+          "Antihunter/full/src/detect.cpp",
+          "Antihunter/full/src/baseline.cpp",
+          "Antihunter/full/src/randomization.cpp",
+          "Antihunter/full/src/drone_detector.cpp"
+        ]
+      },
+      {
+        "name": "web_api",
+        "files": [
+          "Antihunter/full/src/network.cpp",
+          "Antihunter/full/src/web_index_html.h"
+        ]
+      },
+      {
+        "name": "uart_meshtastic_bridge",
+        "files": [
+          "Antihunter/full/src/network_mesh.cpp",
+          "Antihunter/headless/src/network.cpp"
+        ]
+      }
+    ],
+    "build_observations": {
+      "language": "Arduino C and C++17 on pioarduino platform-espressif32",
+      "current_common_flags": [
+        "BOARD_HAS_PSRAM",
+        "qio_opi memory type",
+        "Arduino USB CDC on boot",
+        "NimBLE enabled"
+      ],
+      "current_full_binary_size_observed": "approximately 2.3 MiB",
+      "current_headless_binary_size_observed": "approximately 1.8 MiB",
+      "local_platformio_available_during_audit": false,
+      "compile_test_performed": false
+    }
+  },
+  "target_hardware": {
+    "product": "M5Stack Cardputer-Adv",
+    "core_module": "Stamp-S3A",
+    "soc": "ESP32-S3FN8",
+    "cpu": "dual-core Xtensa LX7 up to 240 MHz",
+    "flash": "8 MB in-package Quad SPI flash",
+    "psram": "none documented and none in the ESP32-S3FN8 package",
+    "display": "ST7789V2, 240x135",
+    "keyboard": "TCA8418, I2C address 0x34, 7x8 matrix exposed as 56 keys",
+    "storage": "built-in microSD over SPI",
+    "recovery": "ROM download mode is entered with the side switch off, G0 held while power is applied, then G0 released",
+    "official_platformio_base": {
+      "platform": "espressif32@6.7.0 in the Cardputer-Adv documentation; version must be reconciled with this repository's pioarduino platform before selection",
+      "board": "esp32-s3-devkitc-1",
+      "framework": "arduino",
+      "library": "https://github.com/m5stack/M5Cardputer"
+    }
+  },
+  "pin_registry": {
+    "cardputer_adv_onboard": [
+      {
+        "function": "LCD",
+        "pins": {
+          "backlight_and_rgb_power_enable": 38,
+          "reset": 33,
+          "data_command": 34,
+          "mosi": 35,
+          "clock": 36,
+          "chip_select": 37
+        },
+        "owner": "M5Cardputer/M5Unified only"
+      },
+      {
+        "function": "keyboard_and_internal_i2c",
+        "pins": {
+          "sda": 8,
+          "scl": 9,
+          "keyboard_interrupt": 11
+        },
+        "owner": "M5Cardputer/M5Unified only"
+      },
+      {
+        "function": "microSD",
+        "pins": {
+          "chip_select": 12,
+          "mosi": 14,
+          "clock": 40,
+          "miso": 39
+        },
+        "owner": "board storage HAL"
+      },
+      {
+        "function": "audio",
+        "pins": {
+          "i2c_sda": 8,
+          "i2c_scl": 9,
+          "sclk": 41,
+          "asdata_out": 46,
+          "lrck": 43,
+          "dsdata_in": 42
+        },
+        "mvp_policy": "disabled"
+      },
+      {
+        "function": "other_onboard",
+        "pins": {
+          "infrared_tx": 44,
+          "battery_adc": 10,
+          "rgb_led": 21
+        },
+        "mvp_policy": "do not claim or reconfigure except through the official board library"
+      }
+    ],
+    "legacy_assumptions_to_remove_or_gate": [
+      {
+        "legacy_function": "external SD",
+        "legacy_pins": [
+          1,
+          7,
+          8,
+          9
+        ],
+        "cardputer_action": "replace with built-in microSD pins 12, 14, 40, and 39"
+      },
+      {
+        "legacy_function": "GPS UART",
+        "legacy_pins": [
+          44,
+          43
+        ],
+        "conflict": "Cardputer infrared and audio",
+        "cardputer_action": "compile out for MVP"
+      },
+      {
+        "legacy_function": "RTC I2C",
+        "legacy_pins": [
+          3,
+          6
+        ],
+        "cardputer_action": "compile out for MVP and use uptime plus an explicitly labeled unsynchronized clock state"
+      },
+      {
+        "legacy_function": "vibration sensor",
+        "legacy_pins": [
+          2
+        ],
+        "cardputer_action": "compile out for MVP; never enable automatic erase from an unvalidated sensor source"
+      },
+      {
+        "legacy_function": "Meshtastic UART",
+        "legacy_pins": [
+          4,
+          5
+        ],
+        "cardputer_action": "compile out for MVP because LoRa is deferred"
+      },
+      {
+        "legacy_function": "GPS PPS",
+        "legacy_pins": [
+          21
+        ],
+        "conflict": "Cardputer RGB LED",
+        "cardputer_action": "compile out for MVP"
+      }
+    ],
+    "deferred_cap_lora_1262_reference_only": {
+      "spi": {
+        "reset": 3,
+        "irq": 4,
+        "busy": 6,
+        "clock": 40,
+        "mosi": 14,
+        "miso": 39,
+        "chip_select": 5
+      },
+      "gps_uart": {
+        "cardputer_rx": 13,
+        "cardputer_tx": 15
+      },
+      "important_constraint": "The Cap shares clock, MOSI, and MISO with microSD and requires explicit chip-select and SPI-bus arbitration. It is an SX1262 peripheral, not the separate UART Meshtastic coprocessor expected by current AntiHunter."
+    }
+  },
+  "critical_gaps": [
+    {
+      "id": "GAP-01",
+      "severity": "blocker",
+      "title": "No PSRAM on Cardputer-Adv",
+      "evidence": [
+        "platformio.ini globally defines BOARD_HAS_PSRAM and qio_opi memory type.",
+        "The code contains PSRAM allocators and many PSRAM-backed queues.",
+        "ESP32-S3FN8 has 8 MB flash and no in-package PSRAM."
+      ],
+      "impact": "The current build configuration is wrong for the target. Even if it compiles, critical queues may fail, features may silently become inert, or runtime heap exhaustion may cause resets.",
+      "required_resolution": "Create a no-PSRAM profile, remove the PSRAM flag and OPI assumption, reduce capacities, add deterministic internal-RAM fallbacks, and measure every task stack and queue."
+    },
+    {
+      "id": "GAP-02",
+      "severity": "blocker",
+      "title": "The board is not a pin-compatible XIAO target",
+      "evidence": [
+        "Both current environments select seeed_xiao_esp32s3.",
+        "Cardputer-Adv has integrated display, keyboard, audio, IMU, microSD, battery measurement, and shared buses."
+      ],
+      "impact": "A pin-only hardware.h edit would leave the board definition, flash mode, memory profile, display, keyboard, and shared peripheral ownership incorrect.",
+      "required_resolution": "Add a dedicated board profile and HAL instead of globally replacing XIAO constants."
+    },
+    {
+      "id": "GAP-03",
+      "severity": "blocker",
+      "title": "Native screen and keyboard are not implemented",
+      "evidence": [
+        "No M5Cardputer or M5Unified dependency exists.",
+        "No display rendering or keyboard event loop exists."
+      ],
+      "impact": "The current firmware can boot only as a headless or web-controlled application.",
+      "required_resolution": "Use current M5Cardputer APIs, let the library auto-detect ADV, and keep all raw LCD and keyboard GPIO ownership inside the official libraries."
+    },
+    {
+      "id": "GAP-04",
+      "severity": "high",
+      "title": "Existing peripheral initialization collides with Cardputer resources",
+      "evidence": [
+        "GPS uses GPIO44 and 43, which are infrared and audio pins on ADV.",
+        "GPS PPS uses GPIO21, which is the ADV RGB LED pin.",
+        "Current SD pins overlap ADV internal I2C pins rather than its microSD slot."
+      ],
+      "impact": "Blindly running existing initialization can disable onboard functions or create pin contention.",
+      "required_resolution": "Make every peripheral capability explicit and default unsupported peripherals off in the ADV profile."
+    },
+    {
+      "id": "GAP-05",
+      "severity": "high",
+      "title": "Automatic erase is inappropriate during bring-up",
+      "evidence": [
+        "The firmware can erase NVS and SD data after vibration/tamper conditions.",
+        "The MVP has no validated SW-420 input and may later substitute an IMU."
+      ],
+      "impact": "A false trigger could destroy configuration and logs while debugging.",
+      "required_resolution": "Hard-disable tamper auto-erase in the ADV MVP build and require a separate security review before any motion-triggered destructive action."
+    },
+    {
+      "id": "GAP-06",
+      "severity": "medium",
+      "title": "Full web UI may exceed the safe internal-RAM budget",
+      "evidence": [
+        "The full build adds AsyncTCP, ESPAsyncWebServer, a large embedded UI, and additional queues.",
+        "The target has no PSRAM."
+      ],
+      "impact": "Feature parity may be unstable even though the binary fits in 8 MB flash.",
+      "required_resolution": "Start with a native-UI profile based on the headless feature set. Add web control only after heap and soak gates pass."
+    },
+    {
+      "id": "GAP-07",
+      "severity": "medium",
+      "title": "Full and headless sources are duplicated",
+      "evidence": [
+        "The repository contains parallel full and headless copies of most scanner and hardware files."
+      ],
+      "impact": "A board port applied independently to both trees will drift and double maintenance cost.",
+      "required_resolution": "Limit the MVP to one source profile and introduce a small shared board abstraction before attempting full parity."
+    },
+    {
+      "id": "GAP-08",
+      "severity": "deferred",
+      "title": "Cap LoRa-1262 does not match the current mesh architecture",
+      "evidence": [
+        "Current AntiHunter expects newline-delimited TEXTMSG over UART from a separate Meshtastic device.",
+        "Cap LoRa-1262 exposes SX1262 SPI control to the same Cardputer MCU."
+      ],
+      "impact": "Changing MESH_RX_PIN and MESH_TX_PIN cannot add LoRa support.",
+      "required_resolution": "Defer and later choose between a separate UART Meshtastic node, an in-process Meshtastic integration, or a non-Meshtastic RadioLib protocol."
+    }
+  ],
+  "safety_contract": {
+    "absolute_guarantee": {
+      "available": false,
+      "claimed_probability": null,
+      "statement": "No percentage guarantee is claimed. Recovery measures reduce consequences; they do not make flashing risk-free."
+    },
+    "never_allowed_by_this_plan": [
+      "Any eFuse write",
+      "Secure-boot enablement",
+      "Flash-encryption enablement",
+      "Read-protection enablement",
+      "Changing USB descriptors before a recovery image and ROM-download procedure are verified",
+      "Flashing a XIAO release binary onto Cardputer-Adv",
+      "Using erase_flash or an equivalent whole-device erase during initial bring-up",
+      "Powering or transmitting with an SX1262 unless a correctly matched antenna is attached and regional rules are configured",
+      "Automatic tamper erase during development"
+    ],
+    "requires_separate_explicit_owner_authorization": [
+      "Installing or changing the local embedded toolchain",
+      "Connecting to and reading a physical Cardputer-Adv",
+      "Writing any byte to the Cardputer-Adv flash",
+      "Changing a partition table or bootloader",
+      "Testing on the owner's primary device rather than a spare",
+      "Enabling any active RF transmission feature",
+      "Beginning the deferred LoRa phase"
+    ],
+    "pre_flash_controls_if_authorized_later": [
+      "Confirm the exact product is Cardputer-Adv, not original Cardputer or Cardputer v1.1.",
+      "Disconnect all expansion caps and Grove devices for the first boot.",
+      "Use stable USB power and a known data cable; charge the battery with the switch in the manufacturer-documented position.",
+      "Enter ROM download mode and perform only chip_id, flash_id, and read-only queries first.",
+      "Read the entire 8 MB flash twice, hash both images, and require matching hashes.",
+      "Download and hash the official factory recovery image before any write.",
+      "Record the original partition table, MAC, flash mode, flash size, and security/eFuse summary without modifying them.",
+      "Build from a pinned toolchain and dependencies; archive the ELF, map, binaries, checksums, source commit, and build log.",
+      "Show the exact proposed write addresses and binary hashes to the owner before requesting final upload authorization.",
+      "Never combine erase and upload in the first hardware trial."
+    ],
+    "recovery_if_authorized_later": [
+      "Switch power off.",
+      "Hold G0, apply USB power, then release G0 to enter ROM download mode.",
+      "Verify the ROM bootloader is visible before attempting recovery.",
+      "Restore the byte-for-byte flash backup with its recorded geometry, or use the official factory Easyloader image.",
+      "Read back and compare the restored flash before normal boot.",
+      "If ROM download mode is not visible, stop; do not probe pins or apply external voltage without hardware-level diagnosis."
+    ]
+  },
+  "selected_implementation_strategy": {
+    "profile_name": "AntiHunter-cardputer-adv",
+    "starting_point": "AntiHunter-headless behavior plus native Cardputer UI",
+    "why": [
+      "The headless profile avoids AsyncTCP and ESPAsyncWebServer during the no-PSRAM bring-up.",
+      "Native input and output are the user's primary reason for the port.",
+      "LoRa, GPS, RTC, vibration, and destructive tamper behavior can be cleanly gated out.",
+      "A smaller feature surface makes heap failures and pin conflicts easier to isolate."
+    ],
+    "design_rules": [
+      "Board capabilities, pins, and initialization live in a board HAL rather than scattered preprocessor constants.",
+      "Unsupported hardware is represented as unavailable, not initialized speculatively.",
+      "The UI reads immutable snapshots or queued events; scan callbacks never draw directly.",
+      "The keyboard produces commands through a queue; it does not mutate scanner state from the display loop.",
+      "All collections and FreeRTOS queues have explicit capacity limits for the no-PSRAM profile.",
+      "Allocation failure must degrade a feature with a visible error rather than silently continuing.",
+      "Passive-only RF behavior is the MVP default."
+    ]
+  },
+  "quality_gates": [
+    {
+      "id": "QG-00",
+      "name": "scope_and_safety_authorization",
+      "status": "failed_by_current_user_constraint",
+      "pass_condition": "Owner explicitly accepts that risk can be minimized and made recoverable but cannot be reduced to a literal zero-risk guarantee.",
+      "blocks": "all implementation and hardware phases"
+    },
+    {
+      "id": "QG-01",
+      "name": "reproducible_compile",
+      "status": "not_run",
+      "pass_condition": "Pinned CI and local builds produce matching environment configuration and a successful Cardputer-Adv firmware build with no PSRAM flags."
+    },
+    {
+      "id": "QG-02",
+      "name": "pin_ownership",
+      "status": "not_run",
+      "pass_condition": "A generated pin report shows no duplicate output owner, no use of GPIO43, 44, or 21 by legacy GPS/PPS code, and no raw ownership of display or keyboard pins outside M5 libraries."
+    },
+    {
+      "id": "QG-03",
+      "name": "memory_budget",
+      "status": "not_run",
+      "pass_condition": "Link map and runtime telemetry show every queue and task created successfully, no PSRAM request occurs, no allocation failure occurs, and configured minimum free-heap and largest-block thresholds remain above values established by the smoke build under maximum supported load."
+    },
+    {
+      "id": "QG-04",
+      "name": "host_and_static_tests",
+      "status": "not_run",
+      "pass_condition": "Existing lint passes, new board-profile tests pass, JSON and configuration validators pass, and no test needs a connected device."
+    },
+    {
+      "id": "QG-05",
+      "name": "recovery_assets",
+      "status": "not_run",
+      "pass_condition": "Two matching full-flash backups, an official factory recovery image, hashes, flash geometry, and a tested read-only ROM download connection exist before any write."
+    },
+    {
+      "id": "QG-06",
+      "name": "peripheral_smoke",
+      "status": "not_run",
+      "pass_condition": "On an authorized spare device, display, keyboard, built-in SD, USB serial, reboot, and power-cycle tests pass with caps disconnected."
+    },
+    {
+      "id": "QG-07",
+      "name": "passive_radio_smoke",
+      "status": "not_run",
+      "pass_condition": "Passive Wi-Fi-only, BLE-only, and alternating Wi-Fi/BLE sessions complete without resets, watchdogs, transmit-only features, queue loss above the documented limit, or heap trend deterioration."
+    },
+    {
+      "id": "QG-08",
+      "name": "soak_and_recovery",
+      "status": "not_run",
+      "pass_condition": "A 24-hour passive scan and UI soak completes, forced reset recovery works, SD removal and reinsertion are handled, and the exact backup restoration procedure succeeds on the test device."
+    },
+    {
+      "id": "QG-09",
+      "name": "release_readiness",
+      "status": "not_run",
+      "pass_condition": "All prior gates pass; known limitations, rollback steps, artifact hashes, board identity, toolchain versions, and legal/regional cautions are documented."
+    }
+  ],
+  "phases": [
+    {
+      "id": "PH-00",
+      "name": "audit_and_plan",
+      "status": "completed",
+      "destructive": false,
+      "deliverables": [
+        "Repository dissection",
+        "Cardputer-Adv pin and resource map",
+        "Feasibility decision",
+        "This gated JSON plan"
+      ],
+      "exit_criteria": [
+        "Fork and upstream are identified.",
+        "Current commit is recorded.",
+        "LoRa is explicitly deferred.",
+        "The no-brick limitation is explicit."
+      ]
+    },
+    {
+      "id": "PH-01",
+      "name": "owner_authorization_gate",
+      "status": "blocked",
+      "blocked_by": [
+        "QG-00"
+      ],
+      "destructive": false,
+      "actions": [
+        "Agree that the goal is risk minimization plus recoverability, not an impossible absolute guarantee.",
+        "Confirm whether development may use a spare Cardputer-Adv.",
+        "Confirm the exact product label and whether a Cap LoRa-1262 is currently attached; keep the cap detached for MVP.",
+        "Authorize or decline local toolchain installation separately from any device access."
+      ],
+      "exit_criteria": [
+        "Explicit owner approval is recorded.",
+        "No hardware-write permission is inferred from implementation approval."
+      ]
+    },
+    {
+      "id": "PH-02",
+      "name": "reproducible_toolchain_and_baseline",
+      "status": "not_started",
+      "destructive": false,
+      "actions": [
+        "Pin the pioarduino PlatformIO core and platform package already used by the repository.",
+        "Build unchanged AntiHunter-full and AntiHunter-headless to establish a baseline.",
+        "Archive dependency resolution, binary sizes, ELF map files, warnings, and hashes.",
+        "Run existing cppcheck targets.",
+        "Add a CI matrix entry only after the new environment exists."
+      ],
+      "anticipated_files": [
+        "platformio.ini",
+        ".github/workflows/platformio.yml",
+        ".github/workflows/lint.yml"
+      ],
+      "exit_criteria": [
+        "Existing targets still build without source changes.",
+        "Tool versions are reproducible.",
+        "QG-01 baseline evidence is available."
+      ]
+    },
+    {
+      "id": "PH-03",
+      "name": "board_profile_and_capability_hal",
+      "status": "not_started",
+      "destructive": false,
+      "actions": [
+        "Add AntiHunter-cardputer-adv as a distinct environment using esp32-s3-devkitc-1 and 8 MB flash.",
+        "Do not inherit BOARD_HAS_PSRAM or qio_opi settings from the XIAO environment.",
+        "Pin M5Cardputer, M5Unified, and M5GFX versions that explicitly support Cardputer-Adv.",
+        "Introduce capabilities for display, keyboard, SD, GPS, RTC, vibration, mesh, audio, IR, PSRAM, and web UI.",
+        "Set only display, keyboard, SD, Wi-Fi, BLE, USB serial, and NVS true for the MVP.",
+        "Move target pins into the board profile and add compile-time duplicate-pin assertions where practical.",
+        "Make unsupported initialization a logged no-op with a stable unavailable status."
+      ],
+      "anticipated_files": [
+        "platformio.ini",
+        "Antihunter/common/board_profile.h",
+        "Antihunter/common/board_cardputer_adv.cpp",
+        "Antihunter/headless/src/main.cpp",
+        "Antihunter/headless/src/hardware.h",
+        "Antihunter/headless/src/hardware.cpp"
+      ],
+      "exit_criteria": [
+        "The environment compiles without PSRAM flags.",
+        "Legacy GPS, RTC, vibration, mesh, and PPS initialization are absent from the ADV build.",
+        "QG-02 passes in compile-time and generated reports."
+      ]
+    },
+    {
+      "id": "PH-04",
+      "name": "minimal_board_smoke_firmware",
+      "status": "not_started",
+      "destructive": false,
+      "actions": [
+        "Create a compile-only smoke target that initializes M5Cardputer with keyboard enabled.",
+        "Render board identity, build hash, reset reason, free heap, and a NO HARDWARE WRITE DURING CI marker.",
+        "Echo keyboard events to the display and USB serial.",
+        "Initialize built-in microSD at a conservative clock and perform read-only card identification by default.",
+        "Do not initialize Wi-Fi, BLE, legacy peripherals, web server, LoRa, or destructive features in this target."
+      ],
+      "anticipated_files": [
+        "Antihunter/cardputer_adv/smoke_main.cpp",
+        "platformio.ini"
+      ],
+      "exit_criteria": [
+        "Compile and link succeed.",
+        "The map file confirms the expected flash geometry and no PSRAM symbol dependency.",
+        "No upload occurs in this phase."
+      ]
+    },
+    {
+      "id": "PH-05",
+      "name": "no_psram_memory_rearchitecture",
+      "status": "not_started",
+      "destructive": false,
+      "actions": [
+        "Replace unconditional PSRAM queue creation with a board-aware allocator and explicit failure handling.",
+        "Create an ADV capacity table for device sets, anomaly queues, probe queues, authentication queues, BLE queues, drone queues, and task stacks.",
+        "Disable non-MVP modules before allocating their queues or tasks.",
+        "Remove global external-memory routing from the ADV boot path.",
+        "Add startup memory accounting after each subsystem.",
+        "Add high-water-mark telemetry for every task and queue.",
+        "Fail closed into a diagnostics screen if a required MVP allocation fails.",
+        "Test container fallback behavior and bounded eviction on the host where possible."
+      ],
+      "anticipated_files": [
+        "Antihunter/headless/src/psram_allocator.h",
+        "Antihunter/headless/src/main.cpp",
+        "Antihunter/headless/src/scanner.cpp",
+        "Antihunter/headless/src/scanner_probe.cpp",
+        "Antihunter/headless/src/baseline.cpp",
+        "Antihunter/headless/src/detect.cpp",
+        "Antihunter/headless/src/drone_detector.cpp",
+        "Antihunter/headless/src/randomization.cpp",
+        "Antihunter/headless/src/network.cpp"
+      ],
+      "exit_criteria": [
+        "No ADV path calls MALLOC_CAP_SPIRAM.",
+        "All required task and queue creations are checked.",
+        "Static map analysis and simulated allocation tests pass.",
+        "QG-03 has defined measured thresholds rather than guessed constants."
+      ]
+    },
+    {
+      "id": "PH-06",
+      "name": "built_in_sd_port",
+      "status": "not_started",
+      "destructive": false,
+      "actions": [
+        "Use GPIO40 clock, GPIO39 MISO, GPIO14 MOSI, and GPIO12 chip-select for ADV microSD.",
+        "Centralize SPI begin/end ownership so repeated availability checks do not reset a bus owned by another subsystem.",
+        "Start at a conservative SPI clock and raise it only after error testing.",
+        "Make card absence nonfatal.",
+        "Add a diagnostics-only write test using a uniquely named temporary file, followed by verified readback and explicit cleanup, only on owner-authorized test media.",
+        "Test removal, reinsertion, full-card, read-only-card, corrupt-file, and interrupted-write behavior.",
+        "Preserve the existing atomic config temporary and backup file semantics."
+      ],
+      "exit_criteria": [
+        "No raw SPI reset occurs outside the storage HAL.",
+        "Normal boot works with no card.",
+        "Authorized SD read/write tests pass without corrupting pre-existing files."
+      ]
+    },
+    {
+      "id": "PH-07",
+      "name": "native_display_architecture",
+      "status": "not_started",
+      "destructive": false,
+      "actions": [
+        "Create a display task that owns all drawing.",
+        "Use small immutable state snapshots from scanner and detector tasks.",
+        "Implement pages for boot diagnostics, dashboard, scan control, live detections, storage status, settings, and errors.",
+        "Use dirty-region or rate-limited redraws to avoid starving radio tasks.",
+        "Show Wi-Fi/BLE radio state, current channel, scan elapsed time, hit count, dropped event count, free heap, SD status, and unsynchronized-clock status.",
+        "Ensure fatal allocation and peripheral errors remain visible and are also printed over USB serial."
+      ],
+      "anticipated_files": [
+        "Antihunter/cardputer_adv/ui.h",
+        "Antihunter/cardputer_adv/ui.cpp",
+        "Antihunter/cardputer_adv/ui_model.h"
+      ],
+      "exit_criteria": [
+        "Rendering never occurs in Wi-Fi or BLE callbacks.",
+        "Display refresh remains responsive during maximum supported scan load.",
+        "UI memory is bounded and included in QG-03."
+      ]
+    },
+    {
+      "id": "PH-08",
+      "name": "keyboard_command_layer",
+      "status": "not_started",
+      "destructive": false,
+      "actions": [
+        "Poll M5Cardputer.update from a dedicated low-priority loop or task.",
+        "Translate keyboard state into navigation and command events.",
+        "Define explicit shortcuts for start, stop, Wi-Fi-only, BLE-only, back, diagnostics, and safe reboot.",
+        "Require confirmation for clearing logs or resetting configuration.",
+        "Exclude secure wipe and tamper auto-erase commands from the MVP keyboard map.",
+        "Debounce commands and prevent repeated start/stop races.",
+        "Add a keyboard diagnostic page covering modifiers, Enter, Backspace, arrows, and printable keys."
+      ],
+      "anticipated_files": [
+        "Antihunter/cardputer_adv/input.h",
+        "Antihunter/cardputer_adv/input.cpp",
+        "Antihunter/cardputer_adv/commands.h"
+      ],
+      "exit_criteria": [
+        "Every command flows through the same serialized control API used by other interfaces.",
+        "No key can trigger a destructive operation in the MVP.",
+        "Held and repeated keys cannot create duplicate worker tasks."
+      ]
+    },
+    {
+      "id": "PH-09",
+      "name": "passive_wifi_ble_core_integration",
+      "status": "not_started",
+      "destructive": false,
+      "actions": [
+        "Bring up Wi-Fi-only passive discovery with UI and SD logging.",
+        "Bring up BLE-only discovery separately.",
+        "Enable alternating Wi-Fi and BLE only after both isolated paths pass.",
+        "Keep Karma bait and all active probe generation disabled.",
+        "Apply explicit bounded result retention and show eviction and drop counts.",
+        "Verify stop commands tear down worker tasks and return the radio to an idle state.",
+        "Verify soft reboot and power cycle do not auto-start a previously crashing mode."
+      ],
+      "exit_criteria": [
+        "Wi-Fi-only, BLE-only, and alternating modes satisfy QG-07.",
+        "No unsupported feature starts in the background.",
+        "All radio errors are visible on screen and USB serial."
+      ]
+    },
+    {
+      "id": "PH-10",
+      "name": "configuration_time_and_data_safety",
+      "status": "not_started",
+      "destructive": false,
+      "actions": [
+        "Namespace ADV configuration keys and add a schema version.",
+        "Migrate only explicitly compatible values from existing AntiHunter configuration.",
+        "Represent time as unsynchronized until set by USB or a later network/GPS source.",
+        "Never pretend uptime-derived timestamps are UTC.",
+        "Disable all automatic erase flags in defaults and migration.",
+        "Add export and import validation for configuration on SD.",
+        "Add a non-destructive reset that renames old configuration rather than deleting it during development."
+      ],
+      "exit_criteria": [
+        "Invalid or old configuration cannot cause a boot loop.",
+        "No development action deletes user logs or NVS without a separate explicit confirmation.",
+        "Timestamp provenance is visible in stored records."
+      ]
+    },
+    {
+      "id": "PH-11",
+      "name": "host_ci_and_artifact_validation",
+      "status": "not_started",
+      "destructive": false,
+      "actions": [
+        "Add the ADV environment to CI without an upload step.",
+        "Validate JSON plans, board pin tables, and partition CSV files.",
+        "Fail CI if BOARD_HAS_PSRAM or qio_opi enters the ADV flags.",
+        "Fail CI if disabled legacy initialization is linked into the ADV image.",
+        "Inspect firmware size and partition fit.",
+        "Archive ELF, map, firmware, bootloader, partition image, hashes, and resolved dependency list.",
+        "Run static analysis and targeted unit tests for command serialization, bounded queues, configuration migration, and timestamp state."
+      ],
+      "exit_criteria": [
+        "QG-01 through QG-04 pass.",
+        "CI has no credential, device, or upload capability.",
+        "Artifacts are reproducible enough to trace every binary to source and dependencies."
+      ]
+    },
+    {
+      "id": "PH-12",
+      "name": "read_only_device_inventory_and_recovery_preparation",
+      "status": "not_started",
+      "destructive": false,
+      "requires_hardware_authorization": true,
+      "actions": [
+        "Connect the exact authorized device with all expansion hardware removed.",
+        "Verify ROM download mode using read-only identification commands.",
+        "Record USB identity, ESP32 chip revision, flash manufacturer, flash size, flash mode, MAC, and security state.",
+        "Read all 8 MB twice and require identical hashes.",
+        "Extract and validate the factory partition table.",
+        "Acquire and hash the official Cardputer-Adv factory recovery artifact.",
+        "Prepare exact restore commands but do not execute them."
+      ],
+      "exit_criteria": [
+        "QG-05 passes.",
+        "No write, erase, reset-to-default, or eFuse command has run.",
+        "The owner receives the inventory and must separately authorize the first write."
+      ]
+    },
+    {
+      "id": "PH-13",
+      "name": "first_hardware_smoke_on_spare",
+      "status": "not_started",
+      "destructive": true,
+      "requires_hardware_authorization": true,
+      "actions": [
+        "Prefer a spare Cardputer-Adv rather than the owner's only device.",
+        "Reconfirm the exact artifact hash and write addresses.",
+        "Request a final human approval immediately before the write.",
+        "Flash only the minimal board smoke artifact using the verified geometry and without a whole-device erase.",
+        "Capture the complete first-boot serial log.",
+        "Test display, keyboard, USB serial, SD absence, SD presence, reboot, and power cycle.",
+        "If any required test fails, stop and restore the exact backup before continuing."
+      ],
+      "exit_criteria": [
+        "QG-06 passes.",
+        "The ROM recovery path remains accessible.",
+        "The factory backup can be restored before scanner firmware is attempted."
+      ]
+    },
+    {
+      "id": "PH-14",
+      "name": "staged_scanner_hardware_validation",
+      "status": "not_started",
+      "destructive": true,
+      "requires_hardware_authorization": true,
+      "actions": [
+        "Flash the passive-only MVP after a separate approval.",
+        "Test idle UI first, then SD logging, then Wi-Fi-only, then BLE-only, then alternating mode.",
+        "Record reset reason, task high-water marks, heap minima, largest block, queue maxima, drops, SD errors, and temperatures where available.",
+        "Perform controlled stop, reboot, power-loss, no-card, and full-card tests.",
+        "Run a short soak before a 24-hour soak.",
+        "Restore factory firmware and verify normal operation as the final recovery test on the spare."
+      ],
+      "exit_criteria": [
+        "QG-07 and QG-08 pass.",
+        "No unexplained reset, allocation failure, watchdog, boot loop, filesystem corruption, or stuck input occurs.",
+        "Factory restoration is verified."
+      ]
+    },
+    {
+      "id": "PH-15",
+      "name": "optional_web_ui_evaluation",
+      "status": "not_started",
+      "destructive": false,
+      "optional": true,
+      "actions": [
+        "Measure the native MVP's real heap margin before adding any web dependency.",
+        "Build a web-enabled variant separately from the stable native variant.",
+        "Reduce or stream large responses and avoid simultaneous unbounded result copies.",
+        "Repeat all memory and radio gates with an AP client connected.",
+        "Reject the web variant if its stability margin is materially worse or if any required queue becomes unreliable."
+      ],
+      "exit_criteria": [
+        "Web support is either proven through the full gate set or remains explicitly unsupported.",
+        "Native UI stability is not traded away for parity."
+      ]
+    },
+    {
+      "id": "PH-16",
+      "name": "documentation_and_release",
+      "status": "not_started",
+      "destructive": false,
+      "actions": [
+        "Document exact supported Cardputer model, unsupported revisions, and required library versions.",
+        "Publish the pin registry and explain why legacy hardware.h values do not apply.",
+        "Document passive-only defaults, unavailable peripherals, memory limits, SD behavior, recovery, and factory restoration.",
+        "Provide hashes and provenance for all release artifacts.",
+        "Label the first release experimental and never present it as zero-risk or full parity.",
+        "Preserve AGPL-3.0 notices and source availability obligations."
+      ],
+      "exit_criteria": [
+        "QG-09 passes.",
+        "A new user can identify the correct image and recovery path without guessing.",
+        "No release image is offered for original Cardputer or Cardputer v1.1."
+      ]
+    },
+    {
+      "id": "PH-17",
+      "name": "deferred_lora_architecture",
+      "status": "deferred",
+      "destructive": false,
+      "start_condition": "The native standalone release is stable, the owner explicitly reopens LoRa scope, and a new memory and RF review is completed.",
+      "actions": [
+        "Choose the required outcome: Meshtastic interoperability or a private LoRa protocol.",
+        "For Meshtastic, compare retaining a separate UART node with integrating the Meshtastic firmware stack; do not assume RadioLib alone provides Meshtastic.",
+        "For a private protocol, define framing, encryption, authentication, replay protection, regional frequency plan, duty-cycle policy, and interoperability limits.",
+        "Implement SPI arbitration between built-in SD and Cap LoRa-1262.",
+        "Initialize the Cap antenna switch through PI4IOE as documented.",
+        "Use Cap GPS on GPIO13 and 15 only after audio and UART ownership are reviewed.",
+        "Require a matched antenna before transmit and test receive-only first.",
+        "Repeat memory, power, thermal, regulatory, soak, and recovery gates."
+      ],
+      "exit_criteria": [
+        "LoRa remains absent from the MVP until every new gate is defined and passed."
+      ]
+    }
+  ],
+  "test_matrix": {
+    "compile_only": [
+      "Original full build",
+      "Original headless build",
+      "ADV smoke build",
+      "ADV passive MVP build",
+      "ADV optional web build only after MVP acceptance"
+    ],
+    "peripheral": [
+      "Display initialization and rotation",
+      "Backlight behavior across reboot",
+      "Keyboard printable and control keys",
+      "USB serial boot and diagnostics",
+      "No SD card",
+      "Valid FAT32 SD card",
+      "Read-only or failing SD card",
+      "SD removal and reinsertion",
+      "Battery-powered reboot",
+      "USB-powered reboot"
+    ],
+    "radio": [
+      "Idle with Wi-Fi and BLE off",
+      "Passive Wi-Fi only",
+      "BLE only",
+      "Alternating Wi-Fi and BLE",
+      "Stop during each mode",
+      "Repeated start and stop",
+      "Dense RF environment with bounded retention",
+      "No active probe or Karma transmission"
+    ],
+    "fault_injection": [
+      "Required queue allocation failure",
+      "SD mount failure",
+      "Corrupt configuration",
+      "Unexpected power loss during log append",
+      "Worker task creation failure",
+      "Watchdog and reset-reason display",
+      "Recovery to factory image"
+    ],
+    "soak": [
+      "One hour per isolated scan mode",
+      "Four hours alternating scan plus UI interaction",
+      "Twenty-four hours passive MVP with SD logging",
+      "Heap minimum and largest-block trend review",
+      "Task stack high-water review",
+      "Queue maximum and drop-count review"
+    ]
+  },
+  "risk_register": [
+    {
+      "id": "R-01",
+      "risk": "Firmware does not boot after a write",
+      "likelihood": "nonzero",
+      "impact": "temporary loss of normal boot; potentially unrecoverable if hardware also fails",
+      "mitigation": "ROM download mode, exact full-flash backup, factory image, spare-device first, no eFuse changes, no first-run erase",
+      "residual_risk": "cannot be eliminated"
+    },
+    {
+      "id": "R-02",
+      "risk": "No-PSRAM runtime exhaustion",
+      "likelihood": "high_without_rearchitecture",
+      "impact": "feature failure, watchdog, reset, or boot loop",
+      "mitigation": "headless-derived MVP, capacity reductions, checked allocations, map analysis, telemetry, staged scans, soak testing",
+      "residual_risk": "requires hardware measurements"
+    },
+    {
+      "id": "R-03",
+      "risk": "GPIO or bus contention damages or disables a peripheral",
+      "likelihood": "medium_without_hal",
+      "impact": "malfunction or electrical stress",
+      "mitigation": "official M5 libraries, single-owner pin registry, compile-time capability gates, caps disconnected, passive smoke build",
+      "residual_risk": "hardware defects and undocumented revisions remain possible"
+    },
+    {
+      "id": "R-04",
+      "risk": "SD corruption or user-data loss",
+      "likelihood": "nonzero",
+      "impact": "lost configuration or logs",
+      "mitigation": "test media, atomic config files, checked writes, conservative SPI, fault tests, no development auto-erase",
+      "residual_risk": "power loss and media failure remain possible"
+    },
+    {
+      "id": "R-05",
+      "risk": "Active RF behavior violates expectations or regulations",
+      "likelihood": "low_in_mvp",
+      "impact": "interference or legal exposure",
+      "mitigation": "passive-only MVP, Karma disabled, LoRa deferred, controlled lab validation",
+      "residual_risk": "Wi-Fi and BLE management behavior must still be verified from the final binary"
+    },
+    {
+      "id": "R-06",
+      "risk": "Upstream changes make the port drift",
+      "likelihood": "medium",
+      "impact": "regressions or security fixes missed",
+      "mitigation": "small shared HAL, pinned dependencies, CI matrix, documented rebase procedure",
+      "residual_risk": "the duplicated full and headless architecture raises ongoing maintenance cost"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "repository",
+      "location": "platformio.ini",
+      "supports": "XIAO target, PSRAM flag, OPI memory mode, libraries, and build environments"
+    },
+    {
+      "kind": "repository",
+      "location": "Antihunter/full/src/hardware.h",
+      "supports": "legacy SD, GPS, RTC, vibration, and mesh pin assumptions"
+    },
+    {
+      "kind": "repository",
+      "location": "Antihunter/full/src/main.cpp",
+      "supports": "boot sequence, PSRAM routing, legacy peripheral initialization, PPS GPIO21, and tasks"
+    },
+    {
+      "kind": "repository",
+      "location": "Antihunter/full/src/network_mesh.cpp",
+      "supports": "UART TEXTMSG architecture and PSRAM queue fallback behavior"
+    },
+    {
+      "kind": "repository",
+      "location": "README.md",
+      "supports": "XIAO hardware BOM, external Meshtastic board, pinout, and feature architecture"
+    },
+    {
+      "kind": "context7",
+      "library_id": "/m5stack/m5cardputer",
+      "supports": "ADV auto-detection, display initialization, keyboard initialization and polling"
+    },
+    {
+      "kind": "context7",
+      "library_id": "/m5stack/m5unified",
+      "supports": "board initialization and Cardputer-Adv SD and I2C pin tables"
+    },
+    {
+      "kind": "context7",
+      "library_id": "/pioarduino/platform-espressif32",
+      "supports": "PlatformIO ESP32 build and partition configuration"
+    },
+    {
+      "kind": "context7",
+      "library_id": "/websites/meshtastic",
+      "supports": "TEXTMSG serial mode is an external-microcontroller bridge"
+    },
+    {
+      "kind": "context7",
+      "library_id": "/jgromes/radiolib/7.4.0",
+      "supports": "SX1262 requires SPI plus NSS, IRQ, reset, and busy control and does not itself supply Meshtastic"
+    },
+    {
+      "kind": "primary_web",
+      "url": "https://docs.m5stack.com/en/core/Cardputer-Adv",
+      "supports": "Cardputer-Adv specifications, pin map, PlatformIO example, and ROM download procedure"
+    },
+    {
+      "kind": "primary_web",
+      "url": "https://docs.m5stack.com/en/core/Cardputer_Mesh_Kit",
+      "supports": "Cap LoRa-1262 and GPS pin map, shared SPI, antenna switch, and official kit architecture"
+    },
+    {
+      "kind": "primary_web",
+      "url": "https://documentation.espressif.com/esp32-s3_datasheet_en.pdf",
+      "supports": "ESP32-S3FN8 contains 8 MB Quad SPI flash and no in-package PSRAM"
+    },
+    {
+      "kind": "primary_web",
+      "url": "https://github.com/m5stack/M5Cardputer",
+      "supports": "official library support for Cardputer and Cardputer-Adv"
+    }
+  ],
+  "final_gate": {
+    "current_result": "NO_GO_FOR_IMPLEMENTATION_OR_FLASH",
+    "why": [
+      "The requested absolute no-brick guarantee is impossible.",
+      "The current firmware assumes PSRAM that Cardputer-Adv does not have.",
+      "The current firmware has several pin conflicts and no native screen or keyboard layer.",
+      "No Cardputer-Adv build or hardware test has yet been performed."
+    ],
+    "what_is_safe_now": [
+      "Keep this plan as the implementation checklist.",
+      "Review or revise scope without touching hardware.",
+      "Perform additional read-only source and documentation analysis."
+    ],
+    "minimum_condition_to_continue": "Explicit owner authorization to pursue a staged, recoverable port with acknowledged nonzero risk. Hardware writes would still require a later, separate approval after compile, memory, pin, backup, and recovery gates pass."
+  }
+}
